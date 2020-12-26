@@ -1,6 +1,6 @@
 # react-native-android-ci/cd
 
-## Use this template to tun your tests in github actions
+## Use this template to run your tests in github actions
 
 ### Steps to setup:
 
