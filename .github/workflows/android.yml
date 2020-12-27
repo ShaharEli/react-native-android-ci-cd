@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -46,7 +46,7 @@ jobs:
         run: |
           npm run build-detox-android
       - name: Android Emulator
-        timeout-minutes: 10
+        timeout-minutes: 15
         continue-on-error: true
         run: |
           echo "Starting emulator"
