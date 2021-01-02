@@ -1,10 +1,10 @@
 # react native android ci/cd
 
-## Use this template to run your tests in github actions
+## Use this template to run your tests and deploy to playstore in github actions 
 
 ### Steps to setup for tests only:
 
-## 1. For tests only (recommended for staging):
+#### 1. For tests only (recommended for staging):
 
 - Copy the .github folder and the workflows floder with `android-tests-only.yml` to your root folder.
 - Setup your tests and with detox - [link to the detox repo](https://github.com/wix/Detox).
@@ -23,7 +23,7 @@
   "test-detox-android": "detox test -c android.emu.workflow"
   </code> scripts to the package.json under "scripts".
 
-## 2. For deployment to the play store only:
+#### 2. For deployment to the play store only:
 
 - Copy the .github folder and the workflows folder with `android-deploy-only.yml` to your root folder.
 - Change the package name to your package name.
@@ -35,7 +35,7 @@
   - KEY_PASSWORD => the key password you used for the key
   - SERVICE_ACCOUNT_JSON => json file from google cloud that you need generate (with owner premmisions).
 
-## 3. For testing and deployment to the play store combined:
+#### 3. For testing and deployment to the play store combined:
 
 - Copy the .github folder and the workflows folder with `android-tests-and-deploy.yml` to your root folder.
 - Follow all the above steps.
