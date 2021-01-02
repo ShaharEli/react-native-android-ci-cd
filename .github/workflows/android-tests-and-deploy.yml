@@ -1,0 +1,96 @@
+name: Android tests and deploy
+# step 1: run git update-index --chmod=+x gradlew
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  Test-build-and-deploy:
+    runs-on: macos-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Node
+        uses: actions/setup-node@v1
+
+      - name: Use specific Java version for sdkmanager to work
+        uses: joschi/setup-jdk@v2
+        with:
+          java-version: "openjdk8"
+          architecture: "x64"
+
+      - name: Download Android Emulator Image
+        run: |
+          echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install "system-images;android-29;google_apis;x86"
+          echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd --force --name emu --device "Nexus 5X" -k 'system-images;android-29;google_apis;x86'
+          $ANDROID_HOME/emulator/emulator -list-avds
+
+      - name: Install depedencies
+        run: |
+          npm i
+
+      - name: Make gradlew executable
+        run: cd android && chmod +x ./gradlew && cd ..
+
+      - name: Build app for detox tests
+        run: |
+          npm run build-detox-android
+
+      - name: Start android Emulator
+        timeout-minutes: 20
+        # continue-on-error: true
+        run: |
+          echo "Starting emulator"
+          nohup $ANDROID_HOME/emulator/emulator -avd emu -no-audio -no-snapshot -no-window &
+          $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+          $ANDROID_HOME/platform-tools/adb devices
+          echo "Emulator started"
+
+      - name: Run android Detox tests
+        run: npm run test-detox-android
+
+      - name: Build Release for android store
+        id: buildRelease
+        run: cd android && ./gradlew bundleRelease
+
+      - name: Remove signature from app if already exists
+        run: zip -d android/app/build/outputs/bundle/release/app-release.aab META-INF/\*
+
+      - name: Sign bundle release
+        id: sign
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload bundle release
+        id: uploadArtifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: app
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Create service_account.json
+        id: createServiceAccount
+        run: echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service_account.json
+
+      - name: Deploy to Play Store
+        id: deploy
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: service_account.json
+          packageName: com.shaharcocktails # your package name
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: production
+          whatsNewDirectory: whatsNewDirectory # directory you need to create

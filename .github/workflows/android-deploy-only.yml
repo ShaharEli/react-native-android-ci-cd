@@ -1,0 +1,73 @@
+name: Android deploy only
+# step 1: run git update-index --chmod=+x gradlew
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  Test-build-and-deploy:
+    runs-on: macos-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Node
+        uses: actions/setup-node@v1
+
+      - name: Use specific Java version for sdkmanager to work
+        uses: joschi/setup-jdk@v2
+        with:
+          java-version: "openjdk8"
+          architecture: "x64"
+
+      - name: Install depedencies
+        run: |
+          npm i
+
+      - name: Make gradlew executable
+        run: cd android && chmod +x ./gradlew && cd ..
+
+      - name: Build Release for android store
+        id: buildRelease
+        run: cd android && ./gradlew bundleRelease
+
+      - name: Remove signature from app if already exists
+        run: zip -d android/app/build/outputs/bundle/release/app-release.aab META-INF/\*
+
+      - name: Sign bundle release
+        id: sign
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload bundle release
+        id: uploadArtifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: app
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Create service_account.json
+        id: createServiceAccount
+        run: echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service_account.json
+
+      - name: Deploy to Play Store
+        id: deploy
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: service_account.json
+          packageName: com.shaharcocktails # your package name
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: production
+          whatsNewDirectory: whatsNewDirectory
