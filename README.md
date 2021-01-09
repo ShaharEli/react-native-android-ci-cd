@@ -1,6 +1,6 @@
 # react native android ci/cd
 
-## Use this template to run your tests and deploy to playstore in github actions 
+## Use this template to run your tests and deploy to playstore in github actions
 
 ### Steps to setup for tests only:
 
@@ -39,3 +39,17 @@
 
 - Copy the .github folder and the workflows folder with `android-tests-and-deploy.yml` to your root folder.
 - Follow all the above steps.
+
+#### 4. For pixel perfect testing:
+
+- Install `react-native-android-immersive-mode` and `react-native-dotenv` .
+- Install in dev dependencies:
+  `fs` , `pixelmatch` and `pngjs` .
+- Add to `.babelrc`: `["module:react-native-dotenv"]` (your file should look like this: `{ "presets": ["module:metro-react-native-babel-preset"], "plugins": [ "@babel/plugin-proposal-optional-chaining", ["module:react-native-dotenv"] ] }`).
+- Add `.env` file and add it to your .gitignore.
+- In the `.env` file add `ON_DEV=true`
+- In the import section of your app add `import { ON_DEV } from '@env'; `
+- In the useEffect or componentDidMount add ` if (ON_DEV) { immersiveModeOn(); } else { immersiveModeOff(); }`
+  (this step is necessary to remove the system ui because the status bar changes in the hour section and in the battery section), if you make change in the env file or even delete it you won`t notice any changes because the proccess varibales are chached so you need to change the import line location.
+- Copy the `screenshotsTest` folder to the `e2e` folder in your project.
+- Enjoy the `testScreenshot` function like so: `import { testScreenshot } from './screenshotsTest';`,` await testScreenshot(PIC_NAME, FOLDER_SECTION);`
